@@ -12,6 +12,7 @@ from .exceptions import (
 # isort: on
 from .models.inverter import PVSInverter
 from .pvs import PVS
+from .pvs_websocket import PVSLiveData, PVSWebSocket
 
 __all__ = (
     "register_updater",
@@ -22,6 +23,8 @@ __all__ = (
     "PVSFirmwareCheckError",
     "PVSAuthenticationError",
     "PVSInverter",
+    "PVSLiveData",
+    "PVSWebSocket",
 )
 
 try:
