@@ -23,7 +23,7 @@ _VAR_PATH_TO_ATTR: dict[str, str] = {
 }
 
 
-@dataclass
+@dataclass(slots=True)
 class PVSLiveData:
     """Container for PVS live data values.
 
