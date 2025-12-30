@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import json
 import logging
 import random
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
 import aiohttp
+
+from .models.livedata import PVSLiveData
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,40 +42,11 @@ _FIELD_DEFINITIONS: tuple[tuple[str, str, str, str], ...] = (
     ("midstate", "/sys/livedata/midstate", "midstate", "string"),
 )
 
-# Pre-built lookup tables (module-level constants for performance)
+# Pre-built lookup table for websocket message processing
 _WS_FIELD_MAP: dict[str, tuple[str, str, str]] = {
     ws_field: (var_path, attr_name, value_type)
     for ws_field, var_path, attr_name, value_type in _FIELD_DEFINITIONS
 }
-
-_VAR_PATH_TO_ATTR: dict[str, str] = {
-    var_path: attr_name for _, var_path, attr_name, _ in _FIELD_DEFINITIONS
-}
-
-
-@dataclass
-class PVSLiveData:
-    """Container for PVS live data values."""
-
-    time: datetime.datetime | None = None
-    pv_p: float | None = None
-    pv_en: float | None = None
-    net_p: float | None = None
-    net_en: float | None = None
-    site_load_p: float | None = None
-    site_load_en: float | None = None
-    ess_en: float | None = None
-    ess_p: float | None = None
-    soc: float | None = None
-    backup_time_remaining: float | None = None
-    midstate: str | None = None
-
-    def get(self, var_name: str) -> Any:
-        """Get value by variable name path."""
-        attr = _VAR_PATH_TO_ATTR.get(var_name)
-        if attr:
-            return getattr(self, attr, None)
-        return None
 
 
 # Type aliases for callbacks
@@ -361,52 +332,46 @@ class PVSWebSocket:
                 except Exception as e:
                     _LOGGER.error("Error in live data callback: %s", e)
 
-    def _convert_value(
-        self, raw_value: Any, value_type: str
-    ) -> float | int | str | datetime.datetime | None:
+    def _convert_value(self, raw_value: Any, value_type: str) -> Any:
         """Convert raw WebSocket value to appropriate type."""
-        if raw_value is None:
-            return None
-
         if value_type == "string":
-            return str(raw_value)
+            return str(raw_value) if raw_value is not None else None
 
         if value_type == "numeric":
-            if isinstance(raw_value, str):
-                if raw_value.lower() in ("nan", "null", ""):
-                    return None
-                try:
-                    float_val = float(raw_value)
-                    if float_val.is_integer():
-                        return int(float_val)
-                    return float_val
-                except (ValueError, TypeError):
-                    return None
-            return raw_value
+            return PVSLiveData._parse_numeric(raw_value)
 
         if value_type == "timestamp":
-            try:
-                timestamp = int(raw_value) if isinstance(raw_value, str) else int(raw_value)
-                current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
-
-                # Detect and cache timestamp format
-                if self._timestamp_format == "milliseconds":
-                    timestamp = timestamp / 1000
-                elif self._timestamp_format == "seconds":
-                    pass
-                else:
-                    if timestamp > current_time + (365 * 24 * 3600):
-                        self._timestamp_format = "milliseconds"
-                        timestamp = timestamp / 1000
-                    else:
-                        self._timestamp_format = "seconds"
-
-                # Validate
-                if timestamp < 0 or timestamp > current_time + (365 * 24 * 3600):
-                    return None
-
-                return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
-            except (ValueError, TypeError, OSError):
-                return None
+            # Use cached format detection for websocket stream
+            return self._convert_timestamp(raw_value)
 
         return None
+
+    def _convert_timestamp(self, raw_value: Any) -> Any:
+        """Convert timestamp with format caching for websocket stream."""
+        if raw_value is None:
+            return None
+        try:
+            import datetime
+
+            timestamp = int(raw_value) if isinstance(raw_value, str) else int(raw_value)
+            current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
+
+            # Detect and cache timestamp format
+            if self._timestamp_format == "milliseconds":
+                timestamp = timestamp / 1000
+            elif self._timestamp_format == "seconds":
+                pass
+            else:
+                if timestamp > current_time + (365 * 24 * 3600):
+                    self._timestamp_format = "milliseconds"
+                    timestamp = timestamp / 1000
+                else:
+                    self._timestamp_format = "seconds"
+
+            # Validate
+            if timestamp < 0 or timestamp > current_time + (365 * 24 * 3600):
+                return None
+
+            return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+        except (ValueError, TypeError, OSError):
+            return None

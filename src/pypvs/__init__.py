@@ -11,8 +11,9 @@ from .exceptions import (
 
 # isort: on
 from .models.inverter import PVSInverter
+from .models.livedata import PVSLiveData
 from .pvs import PVS
-from .pvs_websocket import ConnectionState, PVSLiveData, PVSWebSocket
+from .pvs_websocket import ConnectionState, PVSWebSocket
 
 __all__ = (
     "register_updater",
