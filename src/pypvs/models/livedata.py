@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-
 # Mapping from varserver path to attribute name
 _VAR_PATH_TO_ATTR: dict[str, str] = {
     "/sys/livedata/time": "time",
