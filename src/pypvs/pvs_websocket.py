@@ -38,7 +38,12 @@ _FIELD_DEFINITIONS: tuple[tuple[str, str, str, str], ...] = (
     ("ess_en", "/sys/livedata/ess_en", "ess_en", "numeric"),
     ("ess_p", "/sys/livedata/ess_p", "ess_p", "numeric"),
     ("soc", "/sys/livedata/soc", "soc", "numeric"),
-    ("backupTimeRemaining", "/sys/livedata/backupTimeRemaining", "backup_time_remaining", "numeric"),
+    (
+        "backupTimeRemaining",
+        "/sys/livedata/backupTimeRemaining",
+        "backup_time_remaining",
+        "numeric",
+    ),
     ("midstate", "/sys/livedata/midstate", "midstate", "string"),
 )
 
@@ -116,7 +121,9 @@ class PVSWebSocket:
 
         return remove
 
-    def add_state_listener(self, callback: ConnectionStateCallback) -> Callable[[], None]:
+    def add_state_listener(
+        self, callback: ConnectionStateCallback
+    ) -> Callable[[], None]:
         """Add a listener for connection state changes.
 
         Args:
@@ -283,12 +290,15 @@ class PVSWebSocket:
                     )
                 else:
                     delay = min(
-                        backoff_delay * (2 ** min(reconnect_count - fast_retry_limit - 1, 5)),
+                        backoff_delay
+                        * (2 ** min(reconnect_count - fast_retry_limit - 1, 5)),
                         max_backoff,
                     )
                     jitter = random.uniform(0.8, 1.2)
                     actual_delay = delay * jitter
-                    _LOGGER.info("Reconnecting in %.1fs (exponential backoff)", actual_delay)
+                    _LOGGER.info(
+                        "Reconnecting in %.1fs (exponential backoff)", actual_delay
+                    )
                     backoff_delay = min(backoff_delay * 1.5, max_backoff)
 
                 try:
