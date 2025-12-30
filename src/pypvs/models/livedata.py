@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import datetime
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -43,7 +43,7 @@ class PVSLiveData:
         midstate: MIDC transfer switch state
     """
 
-    time: datetime.datetime | None = None
+    time: datetime | None = None
     pv_p: float | None = None
     pv_en: float | None = None
     net_p: float | None = None
@@ -114,7 +114,7 @@ class PVSLiveData:
         return None
 
     @staticmethod
-    def _parse_timestamp(value: Any) -> datetime.datetime | None:
+    def _parse_timestamp(value: Any) -> datetime | None:
         """Parse a timestamp value from varserver response.
 
         Handles both Unix seconds and milliseconds formats.
@@ -123,7 +123,7 @@ class PVSLiveData:
             return None
         try:
             timestamp = int(value) if isinstance(value, str) else int(value)
-            current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
+            current_time = datetime.now(timezone.utc).timestamp()
 
             # Detect milliseconds vs seconds
             if timestamp > current_time + (365 * 24 * 3600):
@@ -133,6 +133,6 @@ class PVSLiveData:
             if timestamp < 0 or timestamp > current_time + (365 * 24 * 3600):
                 return None
 
-            return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+            return datetime.fromtimestamp(timestamp, tz=timezone.utc)
         except (ValueError, TypeError, OSError):
             return None

@@ -9,7 +9,6 @@ import logging
 import os
 
 from pypvs.pvs_websocket import PVSWebSocket
-from pypvs.models.livedata import PVSLiveData
 
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
